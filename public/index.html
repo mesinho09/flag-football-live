@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#09131f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="description" content="Live-Flag-Football-Spielstand, Spieluhren und Schiedsrichtersteuerung für eure Freunde." />
+  <title>FLAG LIVE · Game Center</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/style.css" />
+  <script src="/socket.io/socket.io.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <a href="/" class="logo" aria-label="Flag Live Start"><span class="logo-mark">F</span><span>FLAG<span class="logo-sub">LIVE</span></span></a>
+      <span class="connection" id="connection"><i></i> Verbinde…</span>
+    </header>
+
+    <section id="welcome" class="welcome">
+      <div class="eyebrow">EUER EIGENES GAME CENTER</div>
+      <h1>Football-Abend.<br /><span>Wie in der NFL.</span></h1>
+      <p class="lead">Ein Handy leitet das Spiel. Alle anderen sehen Punkte, Downs und Uhren live auf ihrem iPhone.</p>
+      <div class="intro-graphic" aria-hidden="true"><span>1ST &amp; GOAL</span><strong>20:00</strong><span>LIVE SCOREBOARD</span></div>
+      <div class="join-grid">
+        <section class="panel">
+          <div class="section-heading">SPIEL ERSTELLEN</div>
+          <label for="nameA">Team 1</label>
+          <input id="nameA" value="BLUE" maxlength="20" autocomplete="off" />
+          <label for="nameB">Team 2</label>
+          <input id="nameB" value="RED" maxlength="20" autocomplete="off" />
+          <button id="createBtn" class="btn btn-primary btn-wide">Neues Match starten <span>↗</span></button>
+          <small>Du erhältst den Schiedsrichter-PIN und einen Spielcode.</small>
+        </section>
+        <section class="panel">
+          <div class="section-heading">SPIEL BEITRETEN</div>
+          <label for="joinCode">Spielcode</label>
+          <input id="joinCode" placeholder="z. B. K7WT2P" maxlength="8" autocapitalize="characters" autocomplete="off" class="code-input" />
+          <label for="joinPin">Schiedsrichter-PIN <span class="hint">(optional)</span></label>
+          <input id="joinPin" type="password" inputmode="numeric" placeholder="Nur für Spielleitung" maxlength="6" autocomplete="off" />
+          <button id="joinBtn" class="btn btn-secondary btn-wide">Live-Spiel öffnen <span>→</span></button>
+          <small>Ohne PIN kannst du nur zuschauen.</small>
+        </section>
+      </div>
+    </section>
+
+    <section id="match" class="match hidden" aria-label="Live-Match">
+      <div class="match-toolbar">
+        <div class="match-info"><span class="live-marker"><i></i> LIVE GAME</span><span class="room-chip">CODE <strong id="roomCode">------</strong></span></div>
+        <button id="shareBtn" class="btn btn-quiet btn-sm">↗ Einladen</button>
+      </div>
+      <div class="stadium-panel">
+        <div class="scoreboard">
+          <div class="team team-a"><div class="team-ball" id="ballA">● BALL</div><div class="team-name" id="teamNameA">BLUE</div><div class="score" id="scoreA">0</div><div class="timeouts-text">TO <span id="toA">● ●</span></div></div>
+          <div class="game-center"><div class="period" id="period">1. HALBZEIT</div><div class="game-time" id="gameTime">20:00</div><div class="clock-label">GAME CLOCK</div><div class="match-status" id="matchStatus">BEREIT</div></div>
+          <div class="team team-b"><div class="team-ball" id="ballB">● BALL</div><div class="team-name" id="teamNameB">RED</div><div class="score" id="scoreB">0</div><div class="timeouts-text">TO <span id="toB">● ●</span></div></div>
+        </div>
+        <div class="match-stripe"><div><span class="small-label">DOWN</span><strong id="downText">1ST DOWN</strong></div><div><span class="small-label">ZIEL</span><strong id="targetText">MITTELLINIE</strong></div><div><span class="small-label">BALLBESITZ</span><strong id="possessionText">BLUE</strong></div></div>
+      </div>
+      <div class="clocks">
+        <div class="clock-card"><div class="clock-head"><span>PLAY CLOCK</span><span>VOR DEM SNAP</span></div><div class="digits" id="playTime">30</div><div class="progress-track"><div id="playProgress" class="progress" style="width:100%"></div></div></div>
+        <div class="clock-card pass"><div class="clock-head"><span>PASS CLOCK</span><span>AB DEM SNAP</span></div><div class="digits" id="passTime">07.0</div><div class="progress-track"><div id="passProgress" class="progress" style="width:100%"></div></div></div>
+      </div>
+      <div class="event-line" role="status"><span class="event-icon">↳</span><span id="lastEvent">Bereit zum Spielstart</span></div>
+      <div class="viewer-bar"><span><span class="online-dot">●</span> <strong id="viewerCount">1</strong> Gerät(e) verbunden</span><span id="roleLabel">ZUSCHAUER</span></div>
+
+      <section id="refPanel" class="ref-panel hidden">
+        <div class="ref-title"><div><span class="eyebrow">CONTROL ROOM</span><h2>SCHIEDSRICHTER</h2></div><span class="ref-badge">REF ACCESS</span></div>
+        <div class="control-group">
+          <div class="group-title">SPIEL &amp; UHR</div>
+          <div class="buttons-two"><button class="btn btn-primary" data-action="clock:toggle" id="clockToggle">▶ Spieluhr starten</button><button class="btn btn-secondary" data-action="snap" id="snapBtn">🏈 SNAP</button></div>
+          <div class="buttons-two"><button class="btn btn-secondary" data-action="play:end">Spielzug beendet</button><button class="btn btn-secondary" data-action="play:reset">↻ Play Clock reset</button></div>
+        </div>
+        <div class="control-group"><div class="group-title">DOWNS &amp; BALLBESITZ</div>
+          <div class="buttons-two"><button class="btn btn-secondary" data-action="play:midfield">✓ Mittellinie erreicht</button><button class="btn btn-secondary" data-action="turnover">⇄ Ballbesitz wechseln</button></div>
+          <button class="btn btn-danger-outline btn-wide" data-action="interception">🏈 INTERCEPTION / TURNOVER</button>
+        </div>
+        <div class="control-group">
+          <div class="group-title">PUNKTE</div>
+          <button class="btn btn-touchdown btn-wide" data-action="touchdown">TOUCHDOWN +6 <span>🏈</span></button>
+          <div id="conversionBox" class="conversion hidden">
+            <strong>EXTRAPUNKTVERSUCH</strong>
+            <p>Wählt die Distanz und wertet den Versuch aus.</p>
+            <div class="buttons-two"><button id="choose1" class="btn btn-secondary try-option" data-action="try:select" data-points="1">1 PT · 5 m</button><button id="choose2" class="btn btn-secondary try-option" data-action="try:select" data-points="2">2 PT · 10 m</button></div>
+            <div class="buttons-two"><button class="btn btn-success" data-action="try:success">✓ Erfolgreich</button><button class="btn btn-secondary" data-action="try:fail">✕ Verfehlt</button></div>
+            <button class="btn btn-danger-outline btn-wide" data-action="try:defense2">Defense return +2</button>
+          </div>
+        </div>
+        <div class="control-group"><div class="group-title">TIMEOUTS</div>
+          <div class="buttons-two"><button id="timeoutA" class="btn btn-secondary" data-action="timeout" data-team="0">Timeout BLUE</button><button id="timeoutB" class="btn btn-secondary" data-action="timeout" data-team="1">Timeout RED</button></div>
+        </div>
+        <div class="control-group"><div class="group-title">KORREKTUREN &amp; VERWALTUNG</div>
+          <div class="score-corrections"><div><span id="corrNameA">BLUE</span><button class="btn btn-small" data-action="score:adjust" data-team="0" data-delta="-1">−1</button><button class="btn btn-small" data-action="score:adjust" data-team="0" data-delta="1">+1</button></div><div><span id="corrNameB">RED</span><button class="btn btn-small" data-action="score:adjust" data-team="1" data-delta="-1">−1</button><button class="btn btn-small" data-action="score:adjust" data-team="1" data-delta="1">+1</button></div></div>
+          <div class="buttons-two"><button class="btn btn-secondary" data-action="undo">↶ Rückgängig</button><button class="btn btn-secondary" id="settingsBtn">⚙ Regeln &amp; Namen</button></div>
+          <div class="buttons-two"><button class="btn btn-secondary" id="halfBtn" data-action="half:next">→ 2. Halbzeit</button><button class="btn btn-danger-outline" id="endBtn" data-action="game:end">Spiel beenden</button></div>
+          <button class="btn btn-quiet btn-wide" id="resetBtn" data-action="game:reset">Neues Match · Alles zurücksetzen</button>
+        </div>
+        <div class="pin-panel"><div><strong>Schiedsrichter-PIN</strong><p>Nur an den anderen QB weitergeben, damit er die Spielleitung übernehmen kann.</p></div><button id="pinBtn" class="btn btn-sm btn-secondary">PIN anzeigen</button><div id="pinValue" class="hidden pin-value">------</div></div>
+      </section>
+      <section id="viewerPanel" class="panel viewer-panel"><strong>Du siehst das Spiel live.</strong><p>Alle Änderungen des Schiedsrichters erscheinen automatisch. Dein Handy braucht eine Internetverbindung.</p></section>
+      <button id="leaveBtn" class="leave-link">← Spiel verlassen / anderes Match öffnen</button>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden" role="alert"></div>
+  <dialog id="settingsDialog" class="settings-dialog">
+    <form id="settingsForm" method="dialog">
+      <h2>Match-Einstellungen</h2>
+      <p class="muted">Nur der Schiedsrichter kann diese ändern. Die Uhren werden bei einer Regeländerung zurückgesetzt.</p>
+      <label for="settingA">Team 1</label><input id="settingA" maxlength="20" required />
+      <label for="settingB">Team 2</label><input id="settingB" maxlength="20" required />
+      <label for="gameMinutes">Halbzeit</label><select id="gameMinutes"><option value="10">10 Minuten</option><option value="15">15 Minuten</option><option value="20">20 Minuten</option><option value="25">25 Minuten</option><option value="30">30 Minuten</option></select>
+      <label for="playSeconds">Play Clock</label><select id="playSeconds"><option value="20">20 Sekunden</option><option value="25">25 Sekunden</option><option value="30">30 Sekunden</option><option value="40">40 Sekunden</option></select>
+      <label for="passSeconds">Pass Clock</label><select id="passSeconds"><option value="5">5 Sekunden</option><option value="7">7 Sekunden</option><option value="10">10 Sekunden</option></select>
+      <div class="buttons-two modal-buttons"><button type="button" class="btn btn-secondary" id="cancelSettings">Abbrechen</button><button type="submit" class="btn btn-primary">Speichern</button></div>
+    </form>
+  </dialog>
+</body>
+</html>
